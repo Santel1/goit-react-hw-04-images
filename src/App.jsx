@@ -140,17 +140,15 @@ export class App extends Component {
   };
 
   render() {
-    const showImages =
-      Array.isArray(this.state.images) && this.state.images.length !== 0;
+    // const showImages =
+    //   Array.isArray(this.state.images) && this.state.images.length !== 0;
 
     return (
       <div>
         <Searchbar onSubmit={this.handleSearchSubmit} />
         {this.state.isLoading && <Loader />}
         {this.state.error && <Error>{this.state.error}</Error>}
-        {showImages && (
-          <ImagaGallery images={this.state.images} openModal={this.openModal} />
-        )}
+        <ImagaGallery images={this.state.images} openModal={this.openModal} />
         {this.state.modal.isOpen && (
           <Modal
             closeModal={this.onOverlayClick}
