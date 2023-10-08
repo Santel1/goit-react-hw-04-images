@@ -14,7 +14,6 @@ export const App = () => {
   const [searchedImagesState, setSearchedImagesState] = useState(null);
   const [pageState, setPageState] = useState(1);
   const [loadMoreState, setLoadMoreState] = useState(false);
-  const [totalHitsState, setTotalHitsState] = useState(false);
   const [modalObjectState, setModalObjectState] = useState({
     isOpen: false,
     data: null,
@@ -25,12 +24,10 @@ export const App = () => {
       await setImagesState(null);
       setSearchedImagesState(searchedImagesState);
       setPageState(1);
-      setTotalHitsState(0);
       try {
         setIsLoadingState(true);
         const images = await findImages(searchedImagesState, 1);
         setImagesState(images.hits);
-        setTotalHitsState(images.totalHits);
         setLoadMoreState(images.hits.length < images.totalHits);
       } catch (error) {
         setErrorState(error.message);
