@@ -1,162 +1,114 @@
 import { Modal } from 'components/Modal/Modal';
 import { Searchbar } from './components/SearchBar/Searchbar';
 import { ImagaGallery } from 'components/ImageGallery/ImageGallery';
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from 'components/Button/Button';
 import { Loader } from 'components/Loader/Loader';
 import { findImages } from 'services/api';
 import { Error } from 'components/Error/Error';
 
-export class App extends Component {
-  state = {
-    images: null,
-    isLoading: false,
-    error: null,
-    searchedImages: null,
-    page: 1,
-    loadMore: false,
-    totalHits: false,
-    modal: {
-      isOpen: false,
-      data: null,
-    },
-  };
+export const App = () => {
+  const [imagesState, setImagesState] = useState(null);
+  const [isLoadingState, setIsLoadingState] = useState(false);
+  const [errorState, setErrorState] = useState(null);
+  const [searchedImagesState, setSearchedImagesState] = useState(null);
+  const [pageState, setPageState] = useState(1);
+  const [loadMoreState, setLoadMoreState] = useState(false);
+  const [totalHitsState, setTotalHitsState] = useState(false);
+  const [modalObjectState, setModalObjectState] = useState({
+    isOpen: false,
+    data: null,
+  });
 
-  componentDidUpdate(_, prevState) {
-    if (prevState.searchedImages !== this.state.searchedImages) {
-      this.searchImages();
-    }
-  }
+  useEffect(() => {
+    const searchImages = async () => {
+      await setImagesState(null);
+      setSearchedImagesState(searchedImagesState);
+      setPageState(1);
+      setTotalHitsState(0);
+      try {
+        setIsLoadingState(true);
+        const images = await findImages(searchedImagesState, 1);
+        setImagesState(images.hits);
+        setTotalHitsState(images.totalHits);
+        setLoadMoreState(images.hits.length < images.totalHits);
+      } catch (error) {
+        setErrorState(error.message);
+      } finally {
+        setIsLoadingState(false);
+      }
+    };
+    searchImages();
+  }, [searchedImagesState]);
 
-  searchImages = async () => {
-    await this.setState(prevState => {
-      return {
-        images: null,
-        page: 1,
-        totalHits: 0,
-      };
-    });
+  const loadMore = async () => {
+    setIsLoadingState(true);
     try {
-      this.setState({ isLoading: true });
-      const images = await findImages(
-        this.state.searchedImages,
-        this.state.page
-      );
-      this.setState(
-        {
-          images: images.hits,
-          totalHits: images.totalHits,
-          loadMore: true,
-        },
-        () => {
-          if (this.state.images.length === this.state.totalHits) {
-            this.setState({ loadMore: false });
-          }
-        }
-      );
-    } catch (error) {
-      this.setState({ error: error.message });
-    } finally {
-      this.setState({ isLoading: false });
-    }
-  };
+      const newImages = await findImages(searchedImagesState, pageState + 1);
 
-  loadMore = async () => {
-    await this.setState(prevState => {
-      return {
-        page: prevState.page + 1,
-        isLoading: true,
-      };
-    });
-
-    try {
-      const newImages = await findImages(
-        this.state.searchedImages,
-        this.state.page
-      );
-
-      this.setState(
-        prevState => {
-          const updatedImages = [...prevState.images, ...newImages.hits];
-          return {
-            images: updatedImages,
-            isLoading: false,
-          };
-        },
-        () => {
-          if (this.state.images.length === this.state.totalHits) {
-            this.setState({ loadMore: false });
-          }
-        }
-      );
-    } catch (error) {
-      this.setState({
-        error: error.message,
-        isLoading: false,
+      setImagesState(prevState => {
+        setIsLoadingState(false);
+        const updatedImages = [...prevState, ...newImages.hits];
+        return updatedImages;
       });
+      setPageState(pageState + 1);
+    } catch (error) {
+      setErrorState(error.message);
+      setIsLoadingState(false);
     }
   };
 
-  handleSearchSubmit = event => {
+  const handleSearchSubmit = event => {
     event.preventDefault();
 
     const searchedImages =
       event.currentTarget.elements.searchImages.value.toLowerCase();
-    this.setState({ searchedImages: searchedImages });
+
+    setSearchedImagesState(searchedImages);
     event.currentTarget.reset();
   };
 
-  openModal = modalData => {
-    this.setState({
-      modal: {
-        isOpen: true,
-        data: modalData,
-      },
+  const openModal = modalData => {
+    setIsLoadingState(true);
+    setModalObjectState({
+      isOpen: true,
+      data: modalData,
     });
-    window.addEventListener('keydown', this.onKeyDown);
+    window.addEventListener('keydown', onKeyDown);
   };
 
-  closeModal = () => {
-    this.setState({
-      isLoading: false,
-      modal: {
-        isOpen: false,
-        data: null,
-      },
+  const closeModal = () => {
+    setIsLoadingState(false);
+    setModalObjectState({
+      isOpen: false,
+      data: null,
     });
-    window.removeEventListener('keydown', this.onKeyDown);
+
+    window.removeEventListener('keydown', onKeyDown);
   };
 
-  onOverlayClick = event => {
+  const onOverlayClick = event => {
     if (event.currentTarget === event.target) {
-      this.closeModal();
+      closeModal();
     }
   };
 
-  onKeyDown = event => {
+  const onKeyDown = event => {
     if (event.code === 'Escape') {
-      this.closeModal();
+      closeModal();
     }
   };
 
-  render() {
-    // const showImages =
-    //   Array.isArray(this.state.images) && this.state.images.length !== 0;
-
-    return (
-      <div>
-        <Searchbar onSubmit={this.handleSearchSubmit} />
-        {this.state.isLoading && <Loader />}
-        {this.state.error && <Error>{this.state.error}</Error>}
-        <ImagaGallery images={this.state.images} openModal={this.openModal} />
-        {this.state.modal.isOpen && (
-          <Modal
-            closeModal={this.onOverlayClick}
-            largeImage={this.state.modal.data}
-          />
-        )}
-        {this.state.loadMore && <Button onClick={this.loadMore} />}
-      </div>
-    );
-  }
-}
+  return (
+    <div>
+      <Searchbar onSubmit={handleSearchSubmit} />
+      {isLoadingState && <Loader />}
+      {errorState && <Error>{errorState}</Error>}
+      <ImagaGallery images={imagesState} openModal={openModal} />
+      {modalObjectState.isOpen && (
+        <Modal closeModal={onOverlayClick} largeImage={modalObjectState.data} />
+      )}
+      {loadMoreState && <Button onClick={loadMore} />}
+    </div>
+  );
+};

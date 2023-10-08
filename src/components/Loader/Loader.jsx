@@ -5,7 +5,7 @@ export const Loader = () => {
   return (
     <span className={css.loader}>
       <RotatingLines
-        strokeColor="blue"
+        strokeColor="lime"
         strokeWidth="5"
         animationDuration="0.75"
         width="96"
